@@ -1,4 +1,12 @@
 
+CHANGES IN VERSION 1.1.2 (from 1.1.1)
+======================================
+
+* Possibility to automatically detect platformName and testdroidTarget from API device information
+* Android and iOS samples updated to use automatic detection of platformName and testdroidTarget
+* Android sample updated to include sample code when using Selendroid (Android devices with API 16 and lower)
+
+
 CHANGES IN VERSION 1.1.1 (from 1.1.0)
 ======================================
 

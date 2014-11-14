@@ -36,8 +36,6 @@ public class BitbarIOSSampleTest {
         // You can override the the in testdroid.properties or give file UUID
         client.setAppFile(new File(SAMPLE_APP_PATH));
         client.setBundleId(BUNDLE_ID);
-        client.setPlatformName(TestdroidAppiumClient.APPIUM_PLATFORM_IOS);
-        client.setTestdroidTarget(TestdroidAppiumClient.TESTDROID_TARGET_IOS);
         wd = client.getDriver();
     }
 
