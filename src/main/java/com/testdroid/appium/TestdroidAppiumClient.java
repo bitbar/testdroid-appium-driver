@@ -503,13 +503,34 @@ public class TestdroidAppiumClient {
         // Local vs cloud
         if (appiumUrl.getHost().equals("localhost")) {
             logger.info("Initializing Appium, server URL {}", appiumUrl);
+            capabilities.setCapability("platformName", getPlatformName());
+            capabilities.setCapability("automationName", automationName);
+
         } else {
             logger.info("Cloud URL {}, username {}", cloudUrl.toString(), username);
-
             logger.info("Looking for device '{}'", deviceName);
-
             getAPI(cloudUrl.toString(), username, password);
             APIDevice device = getDevice(deviceName);
+            APIDevice.OsType osType = device.getOsType();
+            int APILevel = device.getSoftwareVersion().getApiLevel();
+            setPlatformName(osType.getDisplayName());
+            logger.info("Device OS Version {}, Device API Level: {}", osType, APILevel);
+
+            if (getTestdroidTarget() == null) {
+                if (APILevel == 0) {
+                    setTestdroidTarget(TESTDROID_TARGET_IOS);
+                }
+                else if (APILevel >= 17) {
+                    setTestdroidTarget(TESTDROID_TARGET_ANDROID);
+                }
+                else {
+                    setTestdroidTarget(TESTDROID_TARGET_SELENDROID);
+                }
+                logger.info("Testdroid Target: {}", getTestdroidTarget());
+            }
+
+            capabilities.setCapability("platformName", getPlatformName());
+            capabilities.setCapability("testdroid_target", testdroidTarget);
 
             if (fileUUID == null) {
                 fileUUID = uploadFile();
