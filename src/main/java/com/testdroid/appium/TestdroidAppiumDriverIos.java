@@ -1,6 +1,8 @@
 package com.testdroid.appium;
 
 import io.appium.java_client.AppiumDriver;
+import io.appium.java_client.ios.IOSDriver;
+
 import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.interactions.HasTouchScreen;
@@ -25,15 +27,15 @@ import java.net.URL;
  * @author Henri Kivelä <henri.kivela@bitbar.com>
  */
 
-public abstract class TestdroidAppiumDriver extends AppiumDriver implements HasTouchScreen {
+public class TestdroidAppiumDriverIos extends IOSDriver implements HasTouchScreen {
 
     public static final String CAPABILITY_TESTDROID_USERNAME = "testdroid_username";
     public static final String CAPABILITY_TESTDROID_PASSWORD = "testdroid_password";
-    private static final Logger logger = LoggerFactory.getLogger(TestdroidAppiumDriver.class);
+    private static final Logger logger = LoggerFactory.getLogger(TestdroidAppiumDriverIos.class);
 
     public RemoteTouchScreen touch;
 
-    public TestdroidAppiumDriver(URL url, DesiredCapabilities capabilities) {
+    public TestdroidAppiumDriverIos(URL url, DesiredCapabilities capabilities) {
         super(url, capabilities);
         touch = new RemoteTouchScreen(getExecuteMethod());
     }

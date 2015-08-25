@@ -1,25 +1,8 @@
 package com.testdroid.appium;
 
-import com.google.api.client.http.*;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.JsonObjectParser;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.Key;
-import com.testdroid.api.*;
-import com.testdroid.api.http.MultipartFormDataContent;
-import com.testdroid.api.model.*;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.openqa.selenium.OutputType;
-import org.openqa.selenium.TakesScreenshot;
-import org.openqa.selenium.remote.DesiredCapabilities;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.imageio.ImageIO;
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -29,6 +12,43 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.remote.DesiredCapabilities;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.api.client.http.FileContent;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpHeaders;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestFactory;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.JsonObjectParser;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.Key;
+import com.testdroid.api.APIDeviceQueryBuilder;
+import com.testdroid.api.APIException;
+import com.testdroid.api.APIListResource;
+import com.testdroid.api.APIQueryBuilder;
+import com.testdroid.api.DefaultAPIClient;
+import com.testdroid.api.http.MultipartFormDataContent;
+import com.testdroid.api.model.APIDevice;
+import com.testdroid.api.model.APIDeviceRun;
+import com.testdroid.api.model.APIProject;
+import com.testdroid.api.model.APITestRun;
+import com.testdroid.api.model.APIUser;
 
 /**
  * Client for running Appium tests against Testdroid Cloud
@@ -78,7 +98,9 @@ public class TestdroidAppiumClient {
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    private TestdroidAppiumDriver driver;
+    private TestdroidAppiumDriverAndroid androidDriver;
+
+    private TestdroidAppiumDriverIos iOSdriver;
 
     private static DefaultAPIClient api;
 
@@ -88,8 +110,8 @@ public class TestdroidAppiumClient {
 
     private ScreenshotDisplay screenshotDisplay = null;
 
-    private int deviceWaitTime = 120; //Optional, sets time to wait when device is in use, use 0 for no wait time
-    private boolean signAppFile = true; //Optional, if set to false app file will not be resigned
+    private int deviceWaitTime = 120; // Optional, sets time to wait when device is in use, use 0 for no wait time
+    private boolean signAppFile = true; // Optional, if set to false app file will not be resigned
 
     // Testdroid runtime properties
 
@@ -130,18 +152,17 @@ public class TestdroidAppiumClient {
     private String platformName;
     private String automationName;
     private String browserName;
+    private boolean iOSDriverUsed;
+    private boolean androidDriverUsed;
 
     /**
      * Constructor that configures the client using defaults and environment variables
      * <p/>
      * Set the following at least or use setters later:
      * <p/>
-     * testdroid.username
-     * testdroid.password
-     * testdroid.projectName
+     * testdroid.username testdroid.password testdroid.projectName
      */
     public TestdroidAppiumClient() throws MalformedURLException {
-
 
         String sAppiumUrl = getProperty(TESTDROID_APPIUM_URL);
         if(sAppiumUrl != null) {
@@ -165,7 +186,7 @@ public class TestdroidAppiumClient {
         }
 
         String appFilePath = getProperty(APPIUM_APPFILE);
-        if (appFilePath != null) {
+        if(appFilePath != null) {
             appFile = new File(getProperty(APPIUM_APPFILE));
         }
 
@@ -220,12 +241,11 @@ public class TestdroidAppiumClient {
     }
 
     private synchronized static DefaultAPIClient getAPI(String cloudUrl, String username, String password) {
-        if (api == null) {
+        if(api == null) {
             api = new DefaultAPIClient(cloudUrl, username, password);
         }
         return api;
     }
-
 
     public URL getCloudUrl() {
         return cloudUrl;
@@ -267,7 +287,9 @@ public class TestdroidAppiumClient {
         this.appiumUrl = appiumUrl;
     }
 
-    public void setDeviceWaitTime(int secs) { this.deviceWaitTime = secs; }
+    public void setDeviceWaitTime(int secs) {
+        this.deviceWaitTime = secs;
+    }
 
     public void setSignAppFile(boolean sign) {
         this.signAppFile = sign;
@@ -302,7 +324,8 @@ public class TestdroidAppiumClient {
     /**
      * Set bundle ID for iOS tests
      *
-     * @param bundleId Bundle ID. For example com.example.myapp.MyApp
+     * @param bundleId
+     *            Bundle ID. For example com.example.myapp.MyApp
      */
     public void setBundleId(String bundleId) {
         this.bundleId = bundleId;
@@ -420,24 +443,24 @@ public class TestdroidAppiumClient {
 
     /**
      * Upload application file to Testroid Appium broker
+     * 
      * @throws IOException
      * @return File UUID. This can be used in future runs, so there is no need to upload the file every time.
      */
     public String uploadFile() throws Exception {
-        if (appFile == null) {
+        if(appFile == null) {
             throw new Exception("appFile is null");
         }
         logger.info("Uploading application {}, {} bytes", appFile.getAbsolutePath(), appFile.length());
 
         final HttpHeaders headers = new HttpHeaders().setBasicAuthentication(username, password);
 
-        HttpRequestFactory requestFactory =
-                HTTP_TRANSPORT.createRequestFactory(new HttpRequestInitializer() {
-                    public void initialize(HttpRequest request) {
-                        request.setParser(new JsonObjectParser(JSON_FACTORY));
-                        request.setHeaders(headers);
-                    }
-                });
+        HttpRequestFactory requestFactory = HTTP_TRANSPORT.createRequestFactory(new HttpRequestInitializer() {
+            public void initialize(HttpRequest request) {
+                request.setParser(new JsonObjectParser(JSON_FACTORY));
+                request.setHeaders(headers);
+            }
+        });
         MultipartFormDataContent multipartContent = new MultipartFormDataContent();
         FileContent fileContent = new FileContent("application/octet-stream", appFile);
 
@@ -455,15 +478,7 @@ public class TestdroidAppiumClient {
         return fileUUID;
     }
 
-    /**
-     * Initialize Testdroid Cloud Appium session
-     *
-     * Sets capabilities, uploads file to cloud, returns Appium driver when device ready for Appium commands.
-     *
-     * @return
-     */
-    // @TODO Refactor to use proper exceptions not generic one
-    public TestdroidAppiumDriver getDriver() throws Exception {
+    private DesiredCapabilities setCommonCapabilities() throws Exception {
         // Common desired capabilities
         DesiredCapabilities capabilities = new DesiredCapabilities();
 
@@ -488,11 +503,11 @@ public class TestdroidAppiumClient {
         capabilities.setCapability("automationName", automationName);
         capabilities.setCapability("noSign", !signAppFile);
 
-        if (appFile == null && fileUUID == null) {
+        if(appFile == null && fileUUID == null) {
             throw new Exception("Provide either appFile or fileUUID");
         }
 
-        if (appFile != null) {
+        if(appFile != null) {
             logger.info("{} {}", appFile.getAbsoluteFile(), appFile.length());
             capabilities.setCapability("app", appFile.getAbsolutePath());
         }
@@ -501,7 +516,7 @@ public class TestdroidAppiumClient {
         capabilities.setCapability("deviceName", deviceName);
 
         // Local vs cloud
-        if (appiumUrl.getHost().equals("localhost")) {
+        if(appiumUrl.getHost().equals("localhost")) {
             logger.info("Initializing Appium, server URL {}", appiumUrl);
             capabilities.setCapability("platformName", getPlatformName());
             capabilities.setCapability("automationName", automationName);
@@ -516,14 +531,12 @@ public class TestdroidAppiumClient {
             setPlatformName(osType.getDisplayName());
             logger.info("Device OS Version {}, Device API Level: {}", osType, APILevel);
 
-            if (getTestdroidTarget() == null) {
-                if (APILevel == 0) {
+            if(getTestdroidTarget() == null) {
+                if(APILevel == 0) {
                     setTestdroidTarget(TESTDROID_TARGET_IOS);
-                }
-                else if (APILevel >= 17) {
+                } else if(APILevel >= 17) {
                     setTestdroidTarget(TESTDROID_TARGET_ANDROID);
-                }
-                else {
+                } else {
                     setTestdroidTarget(TESTDROID_TARGET_SELENDROID);
                 }
                 logger.info("Testdroid Target: {}", getTestdroidTarget());
@@ -532,14 +545,13 @@ public class TestdroidAppiumClient {
             capabilities.setCapability("platformName", getPlatformName());
             capabilities.setCapability("testdroid_target", testdroidTarget);
 
-            if (fileUUID == null) {
+            if(fileUUID == null) {
                 fileUUID = uploadFile();
             } else {
                 logger.info("File UUID '{}' given, no need to upload application", fileUUID);
             }
 
-            final String finalTestRunName = testRunName != null
-                    ? testRunName : String.format("%s %s", deviceName, DATE_FORMAT.format(new Date()));
+            final String finalTestRunName = testRunName != null ? testRunName : String.format("%s %s", deviceName, DATE_FORMAT.format(new Date()));
 
             logger.info("Project: {}", projectName);
             logger.info("Test run: {}", finalTestRunName);
@@ -549,10 +561,10 @@ public class TestdroidAppiumClient {
             capabilities.setCapability("testdroid_app", fileUUID);
             capabilities.setCapability("testdroid_device", deviceName);
             capabilities.setCapability("testdroid_target", testdroidTarget);
-            if (StringUtils.isNotEmpty(testdroidLocale)) {
+            if(StringUtils.isNotEmpty(testdroidLocale)) {
                 capabilities.setCapability("testdroid_locale", testdroidLocale);
             }
-            if (StringUtils.isNotEmpty(testdroidJUnitWaitTime)) {
+            if(StringUtils.isNotEmpty(testdroidJUnitWaitTime)) {
                 logger.info("Setting testdroid_junitWaitTime to {}", testdroidJUnitWaitTime);
                 capabilities.setCapability("testdroid_junitWaitTime", testdroidJUnitWaitTime);
             }
@@ -564,45 +576,46 @@ public class TestdroidAppiumClient {
 
                 public void run() {
 
-                        Thread.currentThread().setName("DeviceRunMonitor");
-                        Logger logger = LoggerFactory.getLogger(Thread.currentThread().getName());
-                        boolean running = true;
-                        try {
-                            me = api.me();
-                            APIProject project = null;
-                            while (running) {
-                                if (project == null) {
-                                    project = getProject();
-                                    if (project != null) {
-                                        logger.info("Found project: #{} {}", project.getId(), project.getName());
-                                    }
-                                }
-                                if (project != null) {
-                                    APIListResource<APITestRun> testRunResource = project.getTestRunsResource(new APIQueryBuilder().offset(0).limit(10).search(finalTestRunName));
-                                    java.util.List<APITestRun> testRuns = testRunResource.getEntity().getData();
-                                    if (testRuns.size() > 0) {
-                                        APITestRun testRun = testRuns.get(0);
-                                        logger.info("{}: {}", testRun.getDisplayName(), testRun.getState().toString());
-                                        APIListResource<APIDeviceRun> deviceRunsResource = testRun.getDeviceRunsResource();
-                                        List<APIDeviceRun> deviceRunList = deviceRunsResource.getEntity().getData();
-                                        for(APIDeviceRun deviceRun: deviceRunList) {
-                                            logger.info("{} #{} {}/api/v2/users/{}/projects/{}/runs/{}/device-runs/{}/result-data.zip", deviceRun.getDeviceName(), deviceRun.getId(), cloudUrl.toString(), me.getId(), project.getId(), testRun.getId(), deviceRun.getId());
-                                        }
-                                    }
-                                    Thread.sleep(30000);
+                    Thread.currentThread().setName("DeviceRunMonitor");
+                    Logger logger = LoggerFactory.getLogger(Thread.currentThread().getName());
+                    boolean running = true;
+                    try {
+                        me = api.me();
+                        APIProject project = null;
+                        while(running) {
+                            if(project == null) {
+                                project = getProject();
+                                if(project != null) {
+                                    logger.info("Found project: #{} {}", project.getId(), project.getName());
                                 }
                             }
-                        } catch (APIException apiex) {
-                            logger.error("Failed API query, aborting", apiex);
-                        } catch (InterruptedException ex) {
-                            logger.info("Interrupted - stopping");
+                            if(project != null) {
+                                APIListResource<APITestRun> testRunResource = project.getTestRunsResource(new APIQueryBuilder().offset(0).limit(10).search(finalTestRunName));
+                                java.util.List<APITestRun> testRuns = testRunResource.getEntity().getData();
+                                if(testRuns.size() > 0) {
+                                    APITestRun testRun = testRuns.get(0);
+                                    logger.info("{}: {}", testRun.getDisplayName(), testRun.getState().toString());
+                                    APIListResource<APIDeviceRun> deviceRunsResource = testRun.getDeviceRunsResource();
+                                    List<APIDeviceRun> deviceRunList = deviceRunsResource.getEntity().getData();
+                                    for(APIDeviceRun deviceRun : deviceRunList) {
+                                        logger.info("{} #{} {}/api/v2/users/{}/projects/{}/runs/{}/device-runs/{}/result-data.zip", deviceRun.getDeviceName(), deviceRun.getId(), cloudUrl.toString(),
+                                                me.getId(), project.getId(), testRun.getId(), deviceRun.getId());
+                                    }
+                                }
+                                Thread.sleep(30000);
+                            }
                         }
+                    } catch (APIException apiex) {
+                        logger.error("Failed API query, aborting", apiex);
+                    } catch (InterruptedException ex) {
+                        logger.info("Interrupted - stopping");
+                    }
                 }
 
                 private APIProject getProject() throws APIException {
                     APIListResource<APIProject> projectsResource = me.getProjectsResource(new APIQueryBuilder().offset(0).limit(10).search(projectName));
                     java.util.List<APIProject> projects = projectsResource.getEntity().getData();
-                    if (projects.size() > 0) {
+                    if(projects.size() > 0) {
                         return projects.get(0);
                     } else {
                         return null;
@@ -614,13 +627,32 @@ public class TestdroidAppiumClient {
 
             logger.info("Initializing Appium, server URL {}, user {}", appiumUrl, username);
         }
+        return capabilities;
+    }
 
-        driver = new TestdroidAppiumDriver(appiumUrl, capabilities);
-
+    /**
+     * Initialize Testdroid Cloud Appium session
+     *
+     * Sets capabilities, uploads file to cloud, returns Appium driver when device ready for Appium commands.
+     *
+     * @return
+     * @throws Exception
+     */
+    // @TODO Refactor to use proper exceptions not generic one
+    public TestdroidAppiumDriverIos getIOSDriver() throws Exception {
+        DesiredCapabilities capabilities = setCommonCapabilities();
+        iOSdriver = new TestdroidAppiumDriverIos(appiumUrl, capabilities);
         logger.info("Appium connected at {}", appiumUrl);
+        this.iOSDriverUsed = true;
+        return iOSdriver;
+    }
 
-        return driver;
-
+    public TestdroidAppiumDriverAndroid getAndroidDriver() throws Exception {
+        DesiredCapabilities capabilities = setCommonCapabilities();
+        androidDriver = new TestdroidAppiumDriverAndroid(appiumUrl, capabilities);
+        logger.info("Appium connected at {}", appiumUrl);
+        this.androidDriverUsed = true;
+        return androidDriver;
     }
 
     public APIDevice getDevice(String deviceName) throws Exception {
@@ -629,23 +661,22 @@ public class TestdroidAppiumClient {
         try {
             me = api.me();
             logger.info("Connected to Testdroid Cloud with account {} {}", me.getName(), me.getEmail());
-            APIListResource<APIDevice> devicesResource = api.getDevices(
-                    new APIDeviceQueryBuilder().search(deviceName));
+            APIListResource<APIDevice> devicesResource = api.getDevices(new APIDeviceQueryBuilder().search(deviceName));
             java.util.List<APIDevice> devices = devicesResource.getEntity().getData();
-            if (devices.size() == 0) {
+            if(devices.size() == 0) {
                 logger.error("Unable to find device '{}'", deviceName);
                 throw new Exception("No device found");
             }
             device = devices.get(0);
             int sleepTime = 10;
-            while (device.isLocked() && deviceWaitTime > 0) {
+            while(device.isLocked() && deviceWaitTime > 0) {
                 logger.info("All devices are in use right now, waiting for {} seconds...", deviceWaitTime);
                 Thread.sleep(sleepTime * 1000);
                 setDeviceWaitTime(deviceWaitTime - sleepTime);
                 devicesResource = api.getDevices(new APIDeviceQueryBuilder().search(deviceName));
                 device = devicesResource.getEntity().getData().get(0);
             }
-            if (device.isLocked()) {
+            if(device.isLocked()) {
                 String errorMsg = String.format("Every '%s' is busy at the moment", deviceName);
                 logger.error(errorMsg);
                 throw new Exception(errorMsg);
@@ -660,19 +691,26 @@ public class TestdroidAppiumClient {
         }
     }
 
-
     public void quit() {
         logger.info("Quitting Appium driver");
-        if (deviceRunMonitorThread != null) {
+        if(deviceRunMonitorThread != null) {
             deviceRunMonitorThread.interrupt();
         }
-        driver.quit();
+        if(iOSDriverUsed) {
+            iOSdriver.quit();
+        } else {
+            androidDriver.quit();
+        }
     }
 
     public File screenshot(String name) {
         logger.info("Taking screenshot...");
-        File scrFile = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
-
+        File scrFile;
+        if(iOSDriverUsed) {
+            scrFile = ((TakesScreenshot) iOSdriver).getScreenshotAs(OutputType.FILE);
+        } else {
+            scrFile = ((TakesScreenshot) androidDriver).getScreenshotAs(OutputType.FILE);
+        }
         try {
 
             File testScreenshot = new File(name);
@@ -691,9 +729,11 @@ public class TestdroidAppiumClient {
     }
 
     public void showScreenshot(File screenshot) {
-        try { // lets catch everything so that test goes trough even if problem with GUI
-            if (screenshotDisplay != null) {
-                //screenshotDisplay.dispatchEvent(new WindowEvent(screenshotDisplay, WindowEvent.WINDOW_CLOSING));
+        try { // lets catch everything so that test goes trough even if problem
+              // with GUI
+            if(screenshotDisplay != null) {
+                // screenshotDisplay.dispatchEvent(new
+                // WindowEvent(screenshotDisplay, WindowEvent.WINDOW_CLOSING));
                 screenshotDisplay.dispose();
             }
             screenshotDisplay = new ScreenshotDisplay();
@@ -703,6 +743,7 @@ public class TestdroidAppiumClient {
 
         }
     }
+
     // Appium server upload response classes
 
     public static class AppiumResponse {
@@ -730,9 +771,7 @@ public class TestdroidAppiumClient {
         @Key("uploads")
         UploadedFile fileInfo;
     }
-
 }
-
 
 // @TODO make screenshot displaying to fit to screen, reuse the frame
 
@@ -762,7 +801,8 @@ class ScreenshotDisplay extends JFrame {
             image = ImageIO.read(screenshotFile);
             panel = new ImagePanel(image);
         } catch (IOException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            e.printStackTrace(); // To change body of catch statement use File |
+                                 // Settings | File Templates.
             return;
         }
         add(panel);
