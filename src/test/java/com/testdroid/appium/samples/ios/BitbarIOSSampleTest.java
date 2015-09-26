@@ -50,13 +50,15 @@ public class BitbarIOSSampleTest {
     @Test
     public void mainPageTest() throws IOException, InterruptedException {
         wd.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
-        wd.findElement(By.xpath("//UIAApplication[1]/UIAWindow[1]/UIAButton[1]")).click();
+        wd.findElement(By.name("answer2")).click();
         screenshot("1.png");
-        wd.findElement(By.name("userName")).sendKeys("John Doe");
+        wd.findElement(By.name("userName")).click();
         screenshot("2.png");
+        wd.findElement(By.name("userName")).sendKeys("John Doe");
+        screenshot("3.png");
         wd.findElement(By.name("return")).click();
         wd.findElement(By.name("sendAnswer")).click();
-        screenshot("3.png");
+        screenshot("4.png");
     }
 
     private static File screenshot(String name) {
