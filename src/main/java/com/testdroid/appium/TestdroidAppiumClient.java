@@ -9,10 +9,11 @@ import com.google.api.client.util.Key;
 import com.testdroid.api.*;
 import com.testdroid.api.http.MultipartFormDataContent;
 import com.testdroid.api.model.*;
+import io.appium.java_client.AppiumDriver;
+import io.appium.java_client.MobileElement;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.openqa.selenium.OutputType;
-import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +79,9 @@ public class TestdroidAppiumClient {
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    private TestdroidAppiumDriver driver;
+    private TestdroidAppiumDriverAndroid androidDriver;
+
+    private TestdroidAppiumDriverIos iOSdriver;
 
     private static DefaultAPIClient api;
 
@@ -88,8 +91,8 @@ public class TestdroidAppiumClient {
 
     private ScreenshotDisplay screenshotDisplay = null;
 
-    private int deviceWaitTime = 120; //Optional, sets time to wait when device is in use, use 0 for no wait time
-    private boolean signAppFile = true; //Optional, if set to false app file will not be resigned
+    private int deviceWaitTime = 120; // Optional, sets time to wait when device is in use, use 0 for no wait time
+    private boolean signAppFile = true; // Optional, if set to false app file will not be resigned
 
     // Testdroid runtime properties
 
@@ -267,7 +270,9 @@ public class TestdroidAppiumClient {
         this.appiumUrl = appiumUrl;
     }
 
-    public void setDeviceWaitTime(int secs) { this.deviceWaitTime = secs; }
+    public void setDeviceWaitTime(int secs) {
+        this.deviceWaitTime = secs;
+    }
 
     public void setSignAppFile(boolean sign) {
         this.signAppFile = sign;
@@ -455,15 +460,7 @@ public class TestdroidAppiumClient {
         return fileUUID;
     }
 
-    /**
-     * Initialize Testdroid Cloud Appium session
-     *
-     * Sets capabilities, uploads file to cloud, returns Appium driver when device ready for Appium commands.
-     *
-     * @return
-     */
-    // @TODO Refactor to use proper exceptions not generic one
-    public TestdroidAppiumDriver getDriver() throws Exception {
+    private DesiredCapabilities setCommonCapabilities() throws Exception {
         // Common desired capabilities
         DesiredCapabilities capabilities = new DesiredCapabilities();
 
@@ -614,13 +611,30 @@ public class TestdroidAppiumClient {
 
             logger.info("Initializing Appium, server URL {}, user {}", appiumUrl, username);
         }
+        return capabilities;
+    }
 
-        driver = new TestdroidAppiumDriver(appiumUrl, capabilities);
-
+    /**
+     * Initialize Testdroid Cloud Appium session
+     *
+     * Sets capabilities, uploads file to cloud, returns Appium driver when device ready for Appium commands.
+     *
+     * @return
+     * @throws Exception
+     */
+    // @TODO Refactor to use proper exceptions not generic one
+    public TestdroidAppiumDriverIos getIOSDriver() throws Exception {
+        DesiredCapabilities capabilities = setCommonCapabilities();
+        iOSdriver = new TestdroidAppiumDriverIos(appiumUrl, capabilities);
         logger.info("Appium connected at {}", appiumUrl);
+        return iOSdriver;
+    }
 
-        return driver;
-
+    public TestdroidAppiumDriverAndroid getAndroidDriver() throws Exception {
+        DesiredCapabilities capabilities = setCommonCapabilities();
+        androidDriver = new TestdroidAppiumDriverAndroid(appiumUrl, capabilities);
+        logger.info("Appium connected at {}", appiumUrl);
+        return androidDriver;
     }
 
     public APIDevice getDevice(String deviceName) throws Exception {
@@ -666,13 +680,12 @@ public class TestdroidAppiumClient {
         if (deviceRunMonitorThread != null) {
             deviceRunMonitorThread.interrupt();
         }
-        driver.quit();
+        getCurrentDriver().quit();
     }
 
     public File screenshot(String name) {
         logger.info("Taking screenshot...");
-        File scrFile = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
-
+        File scrFile = getCurrentDriver().getScreenshotAs(OutputType.FILE);
         try {
 
             File testScreenshot = new File(name);
@@ -703,6 +716,12 @@ public class TestdroidAppiumClient {
 
         }
     }
+
+    private AppiumDriver<MobileElement> getCurrentDriver() {
+        if (iOSdriver != null) return iOSdriver;
+        else return androidDriver;
+    }
+
     // Appium server upload response classes
 
     public static class AppiumResponse {
