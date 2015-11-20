@@ -1,7 +1,7 @@
 package com.testdroid.appium.samples.android;
 
 import com.testdroid.appium.TestdroidAppiumClient;
-import com.testdroid.appium.TestdroidAppiumDriver;
+import com.testdroid.appium.TestdroidAppiumDriverAndroid;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -30,7 +30,7 @@ public class BitbarSampleAppTest {
     private static final Logger logger = LoggerFactory.getLogger(BitbarSampleAppTest.class);
 
     private static TestdroidAppiumClient client;
-    private static TestdroidAppiumDriver wd;
+    private static TestdroidAppiumDriverAndroid wd;
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -43,7 +43,7 @@ public class BitbarSampleAppTest {
         // Wait one hour for free device
         client.setDeviceWaitTime(3600);
 
-        wd = client.getDriver();
+        wd = client.getAndroidDriver();
         wd.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
     }
 
