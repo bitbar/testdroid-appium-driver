@@ -29,10 +29,10 @@ brew install node
 ```
 
 Install Appium
-Safest version at the moment is 1.2.1.
+Safest version at the moment is 1.3.6.
 
 ```
-npm install appium@1.2.1
+npm install appium@1.3.6
 ```
 
 ### Ubuntu
