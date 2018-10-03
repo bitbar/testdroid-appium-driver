@@ -20,3 +20,5 @@ node_modules
 
 testdroid.properties
 *.png
+
+*.iml

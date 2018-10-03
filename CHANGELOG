@@ -1,3 +1,8 @@
+1.2.1
+=====
+* Stop device monitor when test run is finished
+* Refactor to use the latest API client
+* Use JDK 1.8
 
 1.1.3
 =====

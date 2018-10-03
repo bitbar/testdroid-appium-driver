@@ -8,11 +8,8 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.openqa.selenium.By;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,8 +21,6 @@ import java.util.concurrent.TimeUnit;
 public class BitbarIOSSampleTest {
     private static final String BUNDLE_ID = "com.bitbar.testdroid.BitbarIOSSample";
     private static final String SAMPLE_APP_PATH = "src/test/resources/BitbarIOSSample.ipa";
-
-    private static final Logger logger = LoggerFactory.getLogger(BitbarIOSSampleTest.class);
 
     private static TestdroidAppiumClient client;
     private static TestdroidAppiumDriverIos wd;
@@ -48,7 +43,7 @@ public class BitbarIOSSampleTest {
     }
 
     @Test
-    public void mainPageTest() throws IOException, InterruptedException {
+    public void mainPageTest() {
         wd.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
         wd.findElement(By.name("answer2")).click();
         screenshot("1.png");
@@ -61,8 +56,8 @@ public class BitbarIOSSampleTest {
         screenshot("4.png");
     }
 
-    private static File screenshot(String name) {
-        return client.screenshot(name);
+    private void screenshot(String name) {
+        client.screenshot(name);
     }
 
 }
