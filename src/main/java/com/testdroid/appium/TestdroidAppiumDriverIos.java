@@ -1,7 +1,5 @@
 package com.testdroid.appium;
 
-import io.appium.java_client.AppiumDriver;
-import io.appium.java_client.MobileElement;
 import io.appium.java_client.ios.IOSDriver;
 
 import org.apache.commons.io.FileUtils;

@@ -8,8 +8,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,14 +44,14 @@ public class ChromeTest {
     }
 
     @Test
-    public void mainPageTest() throws IOException, InterruptedException {
+    public void mainPageTest() throws InterruptedException {
         wd.get("http://www.google.com");
         Thread.sleep(500);
         screenshot("google.png");
     }
 
-    private static File screenshot(String name) {
-        return client.screenshot(name);
+    private void screenshot(String name) {
+        client.screenshot(name);
     }
 
 }

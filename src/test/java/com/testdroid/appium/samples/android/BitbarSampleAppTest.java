@@ -8,11 +8,8 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.openqa.selenium.By;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -26,8 +23,6 @@ public class BitbarSampleAppTest {
     private static final String ANDROID_PACKAGE = "com.bitbar.testdroid";
     private static final String ANDROID_ACTIVITY = ".BitbarSampleApplicationActivity";
     private static final String SAMPLE_APP_PATH = "src/test/resources/BitbarSampleApp.apk";
-
-    private static final Logger logger = LoggerFactory.getLogger(BitbarSampleAppTest.class);
 
     private static TestdroidAppiumClient client;
     private static TestdroidAppiumDriverAndroid wd;
@@ -53,7 +48,7 @@ public class BitbarSampleAppTest {
     }
 
     @Test
-    public void mainPageTest() throws IOException, InterruptedException {
+    public void mainPageTest() {
         screenshot("1.png");
         if (client.getTestdroidTarget().equals(TestdroidAppiumClient.TESTDROID_TARGET_SELENDROID)) {
             wd.findElement(By.xpath("//RadioButton[2]")).click();
@@ -62,8 +57,7 @@ public class BitbarSampleAppTest {
             screenshot("3.png");
             wd.navigate().back();
             wd.findElement(By.xpath("//Button[1]")).click();
-        }
-        else {
+        } else {
             wd.findElement(By.xpath("//android.widget.RadioButton[2]")).click();
             screenshot("2.png");
             wd.findElement(By.xpath("//android.widget.EditText[1]")).sendKeys("John Doe");
@@ -74,8 +68,8 @@ public class BitbarSampleAppTest {
         screenshot("4.png");
     }
 
-    private static File screenshot(String name) {
-        return client.screenshot(name);
+    private void screenshot(String name) {
+        client.screenshot(name);
     }
 
 }

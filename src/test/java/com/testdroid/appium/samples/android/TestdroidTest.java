@@ -8,16 +8,13 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.openqa.selenium.By;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Example Appium Android application test.
- *
+ * <p>
  * Sources for the application can be found at
  * https://github.com/bitbar/testdroid-samples/tree/master/apps/android/TestdroidSample
  *
@@ -28,8 +25,6 @@ public class TestdroidTest {
     private static final String ANDROID_PACKAGE = "com.testdroid.sample.android";
     private static final String ANDROID_ACTIVITY = ".MM_MainMenu";
     private static final String SAMPLE_APP_PATH = "src/test/resources/Testdroid.apk";
-
-    private static final Logger logger = LoggerFactory.getLogger(BitbarSampleAppTest.class);
 
     private static TestdroidAppiumClient client;
     private static TestdroidAppiumDriverAndroid wd;
@@ -56,7 +51,7 @@ public class TestdroidTest {
     }
 
     @Test
-    public void mainPageTest() throws IOException, InterruptedException {
+    public void mainPageTest() throws InterruptedException {
         int i = 1;
         Thread.sleep(200); // Wait a bit to make sure the main activity is ready
 
@@ -88,11 +83,11 @@ public class TestdroidTest {
         Thread.sleep(200); // Wait a bit to for animation
         screenshot("screenshot-" + i++ + "-DeviceInfo.png");
         wd.navigate().back();
-        screenshot("screenshot-" + i++ + "-MainMenu2.png");
+        screenshot("screenshot-" + i + "-MainMenu2.png");
     }
 
-    private static File screenshot(String name) {
-        return client.screenshot(name);
+    private void screenshot(String name) {
+        client.screenshot(name);
     }
 
 }
